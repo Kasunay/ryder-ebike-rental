@@ -1,0 +1,13 @@
+package com.ryder.bike_rental_backend;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BikeRentalBackendApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(BikeRentalBackendApplication.class, args);
+	}
+
+}
