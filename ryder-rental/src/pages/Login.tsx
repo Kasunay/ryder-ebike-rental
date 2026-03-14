@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { GoogleIcon, FacebookIcon } from "@/components/ui/icons";
+import { useAuth } from "@/context/AuthContext";
 
 export function Login() {
     const [showPassword, setShowPassword] = useState(false);
@@ -14,7 +15,17 @@ export function Login() {
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [shouldRedirect, setShouldRedirect] = useState(false);
     const navigate = useNavigate();
+    const { login, isAuthenticated } = useAuth();
+
+    // Redirect when auth state is updated
+    useEffect(() => {
+        if (shouldRedirect && isAuthenticated) {
+            console.log("Login: Redirecting to home since user is now authenticated");
+            navigate("/", { replace: true });
+        }
+    }, [shouldRedirect, isAuthenticated, navigate]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,33 +51,21 @@ export function Login() {
             }
 
             const data = await response.json();
+            console.log("Login response:", data); // Debug log
             
-            // Extract JWT token from firstName field
-            const token = data.firstName;
+            // Extract JWT token from firstName field or other common fields
+            const token = data.firstName || data.token || data.accessToken || data.jwt;
+            
             if (token) {
-                // Store token in localStorage
-                localStorage.setItem("authToken", token);
-                
-                // Parse JWT to get user info (optional, for future use)
-                try {
-                    const tokenParts = token.split('.');
-                    if (tokenParts.length === 3) {
-                        const payload = JSON.parse(atob(tokenParts[1]));
-                        localStorage.setItem("userEmail", payload.sub || "");
-                        localStorage.setItem("userRole", payload.role || "");
-                    }
-                } catch (e) {
-                    console.warn("Could not parse JWT token");
-                }
+                // Use auth context to log in
+                console.log("Login: Token found, calling login()");
+                login(token);
                 
                 setSuccessMessage("Logged in successfully!");
-                
-                // Redirect to home page after brief delay
-                setTimeout(() => {
-                    navigate("/");
-                }, 1000);
+                setShouldRedirect(true);
             } else {
-                throw new Error("No authentication token received");
+                console.error("Available fields in response:", Object.keys(data));
+                throw new Error(`No authentication token received. Available fields: ${Object.keys(data).join(", ")}`);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Invalid email or password");
